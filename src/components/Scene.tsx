@@ -90,10 +90,20 @@ const Scene = ({
 
   useEffect(() => {
     createScene();
+
   }, []);
 
   useEffect(() => {
     if (scene && renderer && camera) {
+      window.addEventListener('resize', () => {
+        const width: number = window.innerWidth;
+        const height: number = window.innerHeight;
+        if (renderer && camera) {
+          renderer.setSize(width, height);
+          camera.aspect = width / height;
+          camera.updateProjectionMatrix();
+        }
+      });
       animate();
     }
   }, [scene, camera, renderer]);

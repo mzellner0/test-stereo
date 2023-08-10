@@ -26,7 +26,6 @@ const SideBar = ({
   ) => {
     let fileFromInput: File;
     if (e.target.files && e.target.files.length) {
-      console.log(e.target.files);
       fileFromInput = e.target.files[0];
       const url: string = URL.createObjectURL(fileFromInput);
       setFilePath(url);
