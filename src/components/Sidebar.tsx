@@ -4,6 +4,7 @@ import { MouseEventHandler, useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash, faXmark, faBars } from '@fortawesome/free-solid-svg-icons';
 import * as THREE from 'three';
+import TreeView from './TreeView';
 
 interface Props {
   setFilePath: React.Dispatch<React.SetStateAction<string>>,
@@ -72,11 +73,16 @@ const SideBar = ({
           accept='.gltf,.glb'
         />
         <Button
+          className='mb-3'
           onClick={handleDeleteGltf}
           disabled={!gltf}
         >
           <FontAwesomeIcon icon={faTrash} color='white' />
         </Button>
+        {
+          gltf &&
+          <TreeView gltf={gltf} />
+        }
       </div>
       <div
         className="position-relative bg-dark px-3 py-2 cursor-pointer"

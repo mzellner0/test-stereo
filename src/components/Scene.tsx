@@ -50,7 +50,7 @@ const Scene = ({
       tRenderer.domElement
     );
 
-    const light: THREE.AmbientLight = new THREE.AmbientLight(0x404040);
+    const light: THREE.AmbientLight = new THREE.AmbientLight(0xffffff);
     tScene.add(light);
   }
 
@@ -90,7 +90,6 @@ const Scene = ({
 
   useEffect(() => {
     createScene();
-
   }, []);
 
   useEffect(() => {
