@@ -5,7 +5,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { Spinner } from 'react-bootstrap';
 
 interface Props {
-  file: string,
+  filePath: string,
   scene: THREE.Scene | null,
   gltf: THREE.Object3D | null,
   setScene: React.Dispatch<React.SetStateAction<THREE.Scene | null>>
@@ -13,7 +13,7 @@ interface Props {
 }
 
 const Scene = ({
-  file,
+  filePath,
   scene,
   gltf,
   setScene,
@@ -60,12 +60,12 @@ const Scene = ({
     renderer.render(scene, camera);
   }
 
-  const importGltf: Function = (filePath: string) => {
+  const importGltf: Function = (path: string) => {
     setIsLoading(true);
 
     const loader: GLTFLoader = new GLTFLoader();
 
-    loader.load(filePath, (gltf) => {
+    loader.load(path, (gltf) => {
       if (!scene) return;
       const box: THREE.Box3 = new THREE.Box3().setFromObject(gltf.scene);
       const center = box.getCenter(new THREE.Vector3());
@@ -74,7 +74,7 @@ const Scene = ({
       gltf.scene.position.z += (gltf.scene.position.z - center.z);
       scene.add(gltf.scene);
       setGltf(gltf.scene);
-      URL.revokeObjectURL(filePath);
+      URL.revokeObjectURL(path);
 
       setIsLoading(false);
     });
@@ -82,11 +82,11 @@ const Scene = ({
 
   useEffect(() => {
     const abortCont: AbortController = new AbortController();
-    if (file !== '') {
-      importGltf(file);
+    if (filePath !== '') {
+      importGltf(filePath);
     }
     return () => abortCont.abort();
-  }, [file]);
+  }, [filePath]);
 
   useEffect(() => {
     createScene();
