@@ -1,11 +1,13 @@
 import Form from 'react-bootstrap/Form';
+import Button from 'react-bootstrap/Button';
+import { MouseEventHandler } from 'react';
 
 interface Props {
-  file: string,
-  setFile: React.Dispatch<React.SetStateAction<string>>
+  setFile: React.Dispatch<React.SetStateAction<string>>,
+  handleDeleteGltf: MouseEventHandler<HTMLElement>
 }
 
-const SideBar = ({ setFile }: Props) => {
+const SideBar = ({ setFile, handleDeleteGltf }: Props) => {
   const handleLoadFile: Function = (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -23,6 +25,11 @@ const SideBar = ({ setFile }: Props) => {
         type="file"
         onChange={(e) => handleLoadFile(e)} 
       />
+      <Button
+        onClick={handleDeleteGltf}
+      >
+        Supprimer le modèle
+      </Button>
     </div>
   );
 }

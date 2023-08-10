@@ -2,21 +2,34 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { Spinner } from 'react-bootstrap';
 
 interface Props {
-  file: string
+  file: string,
+  scene: THREE.Scene | null,
+  gltf: THREE.Object3D | null,
+  setScene: React.Dispatch<React.SetStateAction<THREE.Scene | null>>
+  setGltf: React.Dispatch<React.SetStateAction<THREE.Object3D | null>>
 }
 
-const Scene = ({ file }: Props) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const width: number = window.innerWidth;
-  const height: number = window.innerHeight;
+const Scene = ({
+  file,
+  scene,
+  gltf,
+  setScene,
+  setGltf
+}: Props) => {
 
-  const [scene, setScene] = useState<THREE.Scene | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
   const [renderer, setRenderer] = useState<THREE.WebGLRenderer | null>(null);
   const [camera, setCamera] = useState<THREE.PerspectiveCamera | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const createScene: Function = (): void => {
+    const width: number = window.innerWidth;
+    const height: number = window.innerHeight;
+
     const tScene: THREE.Scene = new THREE.Scene();
     setScene(tScene);
 
@@ -31,11 +44,10 @@ const Scene = ({ file }: Props) => {
     setRenderer(tRenderer);
     tRenderer.setClearColor(0x000000, 0);
     tRenderer.setSize(width, height);
-    document.body.appendChild(tRenderer.domElement);
 
     new OrbitControls(
       tCamera,
-      canvasRef.current!
+      tRenderer.domElement
     );
 
     const light: THREE.AmbientLight = new THREE.AmbientLight(0x404040);
@@ -49,6 +61,8 @@ const Scene = ({ file }: Props) => {
   }
 
   const importGltf: Function = (filePath: string) => {
+    setIsLoading(true);
+
     const loader: GLTFLoader = new GLTFLoader();
 
     loader.load(filePath, (gltf) => {
@@ -59,7 +73,10 @@ const Scene = ({ file }: Props) => {
       gltf.scene.position.y += (gltf.scene.position.y - center.y);
       gltf.scene.position.z += (gltf.scene.position.z - center.z);
       scene.add(gltf.scene);
+      setGltf(gltf.scene);
       URL.revokeObjectURL(filePath);
+
+      setIsLoading(false);
     });
   }
 
@@ -83,6 +100,9 @@ const Scene = ({ file }: Props) => {
 
   return (
     <div className="scene">
+      <div>
+        {isLoading && <Spinner className="position-absolute start-50 top-50"></Spinner>}
+      </div>
       <canvas ref={canvasRef}></canvas>
     </div>
   );
