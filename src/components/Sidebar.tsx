@@ -12,7 +12,8 @@ interface Props {
   isMergeObject: boolean,
   handleDeleteGltf: MouseEventHandler<HTMLElement>,
   gltf: THREE.Object3D | null,
-  selectedMesh: THREE.Mesh | null
+  selectedMesh: THREE.Mesh | null,
+  setIsDeletingGltf: React.Dispatch<React.SetStateAction<boolean>>,
 }
 
 const SideBar = ({
@@ -21,7 +22,8 @@ const SideBar = ({
   isMergeObject,
   handleDeleteGltf,
   selectedMesh,
-  gltf
+  gltf,
+  setIsDeletingGltf
 }: Props) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -36,6 +38,7 @@ const SideBar = ({
       fileFromInput = e.target.files[0];
       const url: string = URL.createObjectURL(fileFromInput);
       setFilePath(url);
+      setIsDeletingGltf(false);
     }
   }
 

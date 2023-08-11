@@ -12,8 +12,8 @@ interface Props {
   setScene: React.Dispatch<React.SetStateAction<THREE.Scene | null>>,
   setGltf: React.Dispatch<React.SetStateAction<THREE.Object3D | null>>,
   setSelectedMesh: React.Dispatch<React.SetStateAction<THREE.Mesh | null>>,
-  setIsMergeObject: React.Dispatch<React.SetStateAction<boolean>>,
-  isMergeObject: boolean
+  isMergeObject: boolean,
+  isDeletingGltf: boolean
 }
 
 const Scene = ({
@@ -23,8 +23,8 @@ const Scene = ({
   setScene,
   setGltf,
   setSelectedMesh,
-  setIsMergeObject,
-  isMergeObject
+  isMergeObject,
+  isDeletingGltf
 }: Props) => {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -161,6 +161,7 @@ const Scene = ({
     normalizeObject(singleObject);
 
     scene.remove(gltf);
+    clean(gltf);
     scene.add(singleObject);
     setGltf(singleObject);
   }
@@ -210,6 +211,15 @@ const Scene = ({
     }
   }
 
+  const clean: Function = (object: THREE.Object3D) => {
+    object.traverse(node => {
+      if (node instanceof THREE.Mesh) {
+        node.geometry.dispose();
+        node.material.dispose();
+      }
+    });
+  }
+
   const handleOnClick: MouseEventHandler<HTMLCanvasElement> = (
     e: React.MouseEvent
   ) => {
@@ -248,6 +258,14 @@ const Scene = ({
       mergeGltf();
     }
   }, [isMergeObject]);
+
+  useEffect(() => {
+    if (isDeletingGltf && gltf) {
+      clean(gltf);
+      setGltf(null);
+      setOveredMesh(null);
+    }
+  }, [isDeletingGltf]);
 
   useEffect(() => {
     createScene();
