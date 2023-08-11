@@ -7,20 +7,34 @@ function App() {
   const [filePath, setFilePath] = useState<string>('');
   const [scene, setScene] = useState<THREE.Scene | null>(null);
   const [gltf, setGltf] = useState<THREE.Object3D | null>(null);
+  const [selectedMesh, setSelectedMesh] = useState<THREE.Mesh | null>(null);
 
   const handleDeleteGltf: MouseEventHandler<HTMLElement> = (): void => {
     if (!scene || !gltf) return;
     scene.remove(gltf);
     setGltf(null);
     setFilePath('');
+    setSelectedMesh(null);
   }
 
   return (
     <div className="App">
+      <div className="p-2 bg-dark position-absolute top-0 end-0 d-flex flex-row">
+        <p className="me-2 text-white mb-0">Objet sélectionné :</p>
+        {
+          !selectedMesh &&
+          <p className="text-white mb-0">Aucun</p>
+        }
+        {
+          selectedMesh &&
+          <p className="text-white mb-0">{ selectedMesh.name }</p>
+        }
+      </div>
       <SideBar
         setFilePath={setFilePath}
         handleDeleteGltf={handleDeleteGltf}
         gltf={gltf}
+        selectedMesh={selectedMesh}
       />
       <Scene
         filePath={filePath}
@@ -28,6 +42,7 @@ function App() {
         gltf={gltf}
         setScene={setScene}
         setGltf={setGltf}
+        setSelectedMesh={setSelectedMesh}
       />
     </div>
   );
