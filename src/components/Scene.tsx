@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { Spinner } from 'react-bootstrap';
+import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils';
 
 interface Props {
   filePath: string,
@@ -11,6 +12,8 @@ interface Props {
   setScene: React.Dispatch<React.SetStateAction<THREE.Scene | null>>,
   setGltf: React.Dispatch<React.SetStateAction<THREE.Object3D | null>>,
   setSelectedMesh: React.Dispatch<React.SetStateAction<THREE.Mesh | null>>,
+  setIsMergeObject: React.Dispatch<React.SetStateAction<boolean>>,
+  isMergeObject: boolean
 }
 
 const Scene = ({
@@ -19,7 +22,9 @@ const Scene = ({
   gltf,
   setScene,
   setGltf,
-  setSelectedMesh
+  setSelectedMesh,
+  setIsMergeObject,
+  isMergeObject
 }: Props) => {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -63,8 +68,11 @@ const Scene = ({
       tRenderer.domElement
     );
 
-    const light: THREE.AmbientLight = new THREE.AmbientLight(0xffffff);
+    const light: THREE.AmbientLight = new THREE.AmbientLight(0xbdbdbd);
     tScene.add(light);
+    const pointLight = new THREE.PointLight(0xffffff, 2, 100);
+    pointLight.position.set(1, 1, 1);
+    tScene.add(pointLight);
   }
 
   const animate = (): void => {
@@ -79,7 +87,7 @@ const Scene = ({
       const intersects: THREE.Intersection<THREE.Object3D<THREE.Event>>[] =
         raycaster.intersectObjects(gltf.children, true);
       gltf.traverse((node) => {
-        if (node as THREE.Mesh) {
+        if (node instanceof THREE.Mesh) {
           const mesh: any = node as THREE.Mesh;
           if (mesh.material) {
             mesh.material.emissive = new THREE.Color(0x000000);
@@ -87,7 +95,7 @@ const Scene = ({
         }
       })
       for (let elmt of intersects) {
-        if (elmt.object as THREE.Mesh) {
+        if (elmt.object instanceof THREE.Mesh) {
           const mesh: any = elmt.object as THREE.Mesh;
           if (mesh.material) {
             mesh.material.emissive = new THREE.Color(0x0080ff);
@@ -108,28 +116,98 @@ const Scene = ({
 
     loader.load(path, (gltf) => {
       if (!scene) return;
-      // update scale
-      const targetSize: number = 1.5;
-      const modelBoundingBox: THREE.Box3 =
-        new THREE.Box3().setFromObject(gltf.scene);
-      const modelSize: THREE.Vector3 = new THREE.Vector3();
-      modelBoundingBox.getSize(modelSize);
-      const scaleFactor: number = targetSize / modelSize.length();
-      gltf.scene.scale.set(scaleFactor, scaleFactor, scaleFactor);
-
-      // center the object
-      const box: THREE.Box3 = new THREE.Box3().setFromObject(gltf.scene);
-      const center = box.getCenter(new THREE.Vector3());
-      gltf.scene.position.x += (gltf.scene.position.x - center.x);
-      gltf.scene.position.y += (gltf.scene.position.y - center.y);
-      gltf.scene.position.z += (gltf.scene.position.z - center.z);
-
+      normalizeObject(gltf.scene); 
       scene.add(gltf.scene);
       setGltf(gltf.scene);
       URL.revokeObjectURL(path);
-
       setIsLoading(false);
     });
+  }
+
+  const mergeGltf: Function = () => {
+    if (!gltf || !scene) return;
+
+    for (let test of gltf.children) {
+      flattenHierarchy(test, null);
+    }
+
+    const allGeo: Array<THREE.BufferGeometry> = [];
+    const transforms: Array<THREE.Matrix4> = [];
+    gltf.traverse((node) => {
+      if (node instanceof THREE.Mesh) {
+        const transform: THREE.Matrix4 = new THREE.Matrix4().compose(
+          node.position.clone(),
+          node.quaternion.clone(),
+          node.scale.clone()
+        );
+        transforms.push(transform);
+        allGeo.push(node.geometry);
+      }
+    });
+    const singleGeo: THREE.BufferGeometry = BufferGeometryUtils.mergeGeometries(allGeo, false);
+    const singleAttribute = BufferGeometryUtils.mergeAttributes(allGeo.map((geom, index) => {
+      const transform = transforms[index];
+      const positions = geom.attributes.position.clone();
+      positions.applyMatrix4(transform);
+      return positions;
+    }));
+    singleGeo.computeVertexNormals();
+    singleGeo.setAttribute('position', singleAttribute);
+    const material: THREE.MeshStandardMaterial = new THREE.MeshStandardMaterial({
+      color: 0xbdbdbd,
+      flatShading: true
+    });
+    const singleObject = new THREE.Mesh(singleGeo, material);
+    normalizeObject(singleObject);
+
+    scene.remove(gltf);
+    scene.add(singleObject);
+    setGltf(singleObject);
+  }
+
+  const normalizeObject: Function = (object: THREE.Object3D) => {
+      //update scale
+      const targetSize: number = 1.5;
+      const modelBoundingBox: THREE.Box3 =
+        new THREE.Box3().setFromObject(object);
+      const modelSize: THREE.Vector3 = new THREE.Vector3();
+      modelBoundingBox.getSize(modelSize);
+      const scaleFactor: number = targetSize / modelSize.length();
+      object.scale.set(scaleFactor, scaleFactor, scaleFactor);
+
+      // center the object
+      const box: THREE.Box3 = new THREE.Box3().setFromObject(object);
+      const center = box.getCenter(new THREE.Vector3());
+      object.position.x += (object.position.x - center.x);
+      object.position.y += (object.position.y - center.y);
+      object.position.z += (object.position.z - center.z);
+  }
+
+  const flattenHierarchy: Function = (
+    object: THREE.Object3D,
+    parentMatrix: THREE.Matrix4
+  ) => {
+    const matrix: THREE.Matrix4 = new THREE.Matrix4().compose(
+      object.position.clone(),
+      object.quaternion.clone(),
+      object.scale.clone()
+    );
+    if (parentMatrix) {
+      matrix.multiplyMatrices(parentMatrix, matrix);
+    }
+
+    for (let child of object.children) {
+      flattenHierarchy(child, matrix);
+    }
+
+    if (object instanceof THREE.Mesh) {
+      // reapplique la nouvelle matrice sur l'objet
+      object.geometry.applyMatrix4(matrix);
+      object.position.set(0, 0, 0);
+      object.rotation.set(0, 0, 0);
+      object.scale.set(1, 1, 1);
+      object.updateMatrix();
+    }
   }
 
   const handleOnClick: MouseEventHandler<HTMLCanvasElement> = (
@@ -149,7 +227,7 @@ const Scene = ({
   }
 
   useEffect(() => {
-    if (gltf) {
+    if (gltf && !isMergeObject) {
       handleRaycasterRender();
     } else if (idRaycasterRender) {
       cancelAnimationFrame(idRaycasterRender);
@@ -164,6 +242,12 @@ const Scene = ({
     }
     return () => abortCont.abort();
   }, [filePath]);
+
+  useEffect(() => {
+    if (isMergeObject) {
+      mergeGltf();
+    }
+  }, [isMergeObject]);
 
   useEffect(() => {
     createScene();

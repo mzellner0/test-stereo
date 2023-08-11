@@ -8,6 +8,7 @@ function App() {
   const [scene, setScene] = useState<THREE.Scene | null>(null);
   const [gltf, setGltf] = useState<THREE.Object3D | null>(null);
   const [selectedMesh, setSelectedMesh] = useState<THREE.Mesh | null>(null);
+  const [isMergeObject, setIsMergeObject] = useState<boolean>(false);
 
   const handleDeleteGltf: MouseEventHandler<HTMLElement> = (): void => {
     if (!scene || !gltf) return;
@@ -15,6 +16,7 @@ function App() {
     setGltf(null);
     setFilePath('');
     setSelectedMesh(null);
+    setIsMergeObject(false);
   }
 
   return (
@@ -35,6 +37,8 @@ function App() {
         handleDeleteGltf={handleDeleteGltf}
         gltf={gltf}
         selectedMesh={selectedMesh}
+        setIsMergeObject={setIsMergeObject}
+        isMergeObject={isMergeObject}
       />
       <Scene
         filePath={filePath}
@@ -43,6 +47,8 @@ function App() {
         setScene={setScene}
         setGltf={setGltf}
         setSelectedMesh={setSelectedMesh}
+        isMergeObject={isMergeObject}
+        setIsMergeObject={setIsMergeObject}
       />
     </div>
   );

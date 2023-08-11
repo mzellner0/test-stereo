@@ -8,6 +8,8 @@ import TreeView from './TreeView';
 
 interface Props {
   setFilePath: React.Dispatch<React.SetStateAction<string>>,
+  setIsMergeObject: React.Dispatch<React.SetStateAction<boolean>>,
+  isMergeObject: boolean,
   handleDeleteGltf: MouseEventHandler<HTMLElement>,
   gltf: THREE.Object3D | null,
   selectedMesh: THREE.Mesh | null
@@ -15,6 +17,8 @@ interface Props {
 
 const SideBar = ({
   setFilePath,
+  setIsMergeObject,
+  isMergeObject,
   handleDeleteGltf,
   selectedMesh,
   gltf
@@ -94,6 +98,13 @@ const SideBar = ({
             />
           </div>
         }
+        <Button
+          className='mb-3'
+          onClick={() => setIsMergeObject(true)}
+          disabled={!gltf || isMergeObject}
+        >
+          Merger l'objet
+        </Button>
         <Button
           className='mb-3'
           onClick={handleDeleteGltf}
