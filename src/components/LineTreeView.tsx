@@ -13,7 +13,7 @@ const LineTreeView = ({ object }: Props) => {
     <li style={{listStyle: 'none'}}>
       <div
         className="d-flex flex-row"
-        style={{cursor: 'pointer'}}
+        style={{cursor: object.children.length > 0 ? 'pointer' : 'auto'}}
         onClick={() => setIsLineOpened(!isLineOpened)}
       >
         {

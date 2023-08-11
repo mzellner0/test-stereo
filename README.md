@@ -4,7 +4,7 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 
 ## Available Scripts
 
-In the project directory, you can run:
+In the project directory, you can run (after running `npm install`):
 
 ### `npm start`
 
@@ -44,3 +44,20 @@ You don’t have to ever use `eject`. The curated feature set is suitable for sm
 You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
 To learn React, check out the [React documentation](https://reactjs.org/).
+
+## Choix techniques :
+J'ai décidé d'utiliser bootstrap pour le framework css comme il est très largement répandu.
+
+## Tester l’application : 
+Une fois l’application lancée, vous pouvez la tester en important n’importe quel gltf  ou glb à l’aide du bouton dans le menu.
+J’ai pris la décision de ne pouvoir loader qu’un seul gltf/glb à la fois pour qu’ils ne se superposent pas. Il faut donc supprimer le gltf à l’aide du bouton sur lequel il y a une corbeille avant de pouvoir en loader un autre.
+
+## Difficultés rencontrées : 
+Je savais dans l’ensemble à l’avance comment faire les différents points demandés. C’était des choses que j’avais déjà faites.
+Sauf pour le dernier point “avancé”, le merge du gltf.
+
+Ce dernier point m’a donc pris un peu plus de temps.
+Je ne savais pas si le challenge un (celui impliquant le raycaster) devait être compatible avec le merge de l’objet. En effet, une fois tous les meshs mergés en un seul, il est compliqué de pouvoir sélectionner chaque objet dans le canvas.
+
+Pour pouvoir présenter les deux points j’ai donc pris la décision de merger les objets au clique sur un bouton dans le menu, ce qui a pour conséquence de n’appliquer qu’un seul matériel sur l’objet et donc d’enlever les couleurs.
+
