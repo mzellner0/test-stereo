@@ -116,7 +116,7 @@ const SideBar = ({
           <FontAwesomeIcon icon={faTrash} color='white' />
         </Button>
         {
-          gltf &&
+          gltf && !isMergeObject &&
           <TreeView gltf={gltf} />
         }
       </div>

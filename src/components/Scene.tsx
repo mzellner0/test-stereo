@@ -70,7 +70,7 @@ const Scene = ({
 
     const light: THREE.AmbientLight = new THREE.AmbientLight(0xbdbdbd);
     tScene.add(light);
-    const pointLight = new THREE.PointLight(0xffffff, 2, 100);
+    const pointLight: THREE.PointLight = new THREE.PointLight(0xffffff, 2, 100);
     pointLight.position.set(1, 1, 1);
     tScene.add(pointLight);
   }
