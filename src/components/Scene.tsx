@@ -37,6 +37,7 @@ const Scene = ({
   const [idRaycasterRender, setIdRaycasterRender] =
     useState<number | null>(null);
   const [overedMesh, setOveredMesh] = useState<THREE.Mesh | null>(null);
+  const [bufferSavedColorArray, setBufferSavedColorArray] = useState<Array<number> | null>(null);
 
   const createScene: Function = (): void => {
     const width: number = window.innerWidth;
@@ -81,30 +82,83 @@ const Scene = ({
     renderer.render(scene, camera);
   }
 
+  const updateColorOfOnePoint = (mesh: THREE.Mesh, index: number) => {
+    mesh.geometry.attributes.color.array[
+      index * 3
+    ] = 0;
+    mesh.geometry.attributes.color.array[
+      index * 3 + 1
+    ] = 1;
+    mesh.geometry.attributes.color.array[
+      index * 3 + 2
+    ] = 0;
+  }
+
+  const getQuadFace = (mesh: THREE.Mesh , pointsToUpdate: Array<number>): void => {
+    if (mesh.geometry.index == null) return;
+    for (let x = 0; x < mesh.geometry.index.array.length; x += 3) {
+      const array = mesh.geometry.index.array;
+      if (
+        pointsToUpdate.includes(array[x]) ||
+        pointsToUpdate.includes(array[x + 1]) ||
+        pointsToUpdate.includes(array[x + 2])
+      ) {
+        if (!pointsToUpdate.includes(array[x])) pointsToUpdate.push(array[x]);
+        if (!pointsToUpdate.includes(array[x + 1])) pointsToUpdate.push(array[x + 1]);
+        if (!pointsToUpdate.includes(array[x + 2])) pointsToUpdate.push(array[x + 2]);
+      }
+    }
+  }
+
   const handleRaycasterRender = (): void => {
     if (raycaster && pointer && camera && gltf && renderer && scene) {
       raycaster.setFromCamera(pointer, camera);
       const intersects: THREE.Intersection<THREE.Object3D<THREE.Event>>[] =
-        raycaster.intersectObjects(gltf.children, true);
-      gltf.traverse((node) => {
+        raycaster.intersectObjects(scene.children, true);
+      scene.traverse((node) => {
         if (node instanceof THREE.Mesh) {
           const mesh: any = node as THREE.Mesh;
-          if (mesh.material) {
+          if (mesh.material  && !mesh.geometry.attributes.color) {
             mesh.material.emissive = new THREE.Color(0x000000);
+          } else if (mesh.geometry.attributes.color && bufferSavedColorArray) {
+            mesh.geometry.attributes.color.array = Float32Array.from(bufferSavedColorArray);
+            mesh.geometry.attributes.color.needsUpdate = true;
           }
         }
       })
-      for (let elmt of intersects) {
-        if (elmt.object instanceof THREE.Mesh) {
-          const mesh: any = elmt.object as THREE.Mesh;
-          if (mesh.material) {
-            mesh.material.emissive = new THREE.Color(0x0080ff);
+      if (intersects.length) {
+        for (let elmt of intersects) {
+          if (elmt.object instanceof THREE.Mesh) {
+            const mesh: any = elmt.object as THREE.Mesh;
+            if (mesh.material) {
+              if (mesh.geometry.attributes.color) {
+                const colorFromMesh = mesh.geometry.getAttribute('color');
+                const pointsToUpdate: Array<number> = [];
+                if (intersects[0] && intersects[0].face) {
+                  pointsToUpdate.push(intersects[0].face.a);
+                  pointsToUpdate.push(intersects[0].face.b);
+                  pointsToUpdate.push(intersects[0].face.c);
+                  // let newLength;
+                  // let oldLength;
+                  // do {
+                  //   oldLength = pointsToUpdate.length;
+                    getQuadFace(mesh, pointsToUpdate);
+                  //   newLength = pointsToUpdate.length;
+                  // } while (newLength != oldLength);
+                  for (let point of pointsToUpdate) {
+                    updateColorOfOnePoint(mesh, point);
+                  }
+                }
+                colorFromMesh.needsUpdate = true;
+              } else {
+                mesh.material.emissive = new THREE.Color(0x0080ff);
+              }
+            }
+            setOveredMesh(mesh);
+            break;
           }
-          setOveredMesh(mesh);
-          break;
         }
       }
-      renderer.render(scene, camera);
       setIdRaycasterRender(requestAnimationFrame(handleRaycasterRender));
     }
   }
@@ -127,20 +181,13 @@ const Scene = ({
   const mergeGltf: Function = () => {
     if (!gltf || !scene) return;
 
-    for (let test of gltf.children) {
-      flattenHierarchy(test, null);
-    }
-
     const allGeo: Array<THREE.BufferGeometry> = [];
     const transforms: Array<THREE.Matrix4> = [];
+    const colors: Array<THREE.Color> = [];
     gltf.traverse((node) => {
       if (node instanceof THREE.Mesh) {
-        const transform: THREE.Matrix4 = new THREE.Matrix4().compose(
-          node.position.clone(),
-          node.quaternion.clone(),
-          node.scale.clone()
-        );
-        transforms.push(transform);
+        transforms.push(node.matrixWorld);
+        colors.push(node.material.color);
         allGeo.push(node.geometry);
       }
     });
@@ -151,11 +198,17 @@ const Scene = ({
       positions.applyMatrix4(transform);
       return positions;
     }));
+    const colorAttribute = BufferGeometryUtils.mergeAttributes(allGeo.map((geom, index) => {
+      return createColorAttributeFromGeo(geom, colors[index]);
+    })); 
+    setBufferSavedColorArray(Array.from(colorAttribute.clone().array));
     singleGeo.computeVertexNormals();
     singleGeo.setAttribute('position', singleAttribute);
+    singleGeo.setAttribute('color', colorAttribute);
     const material: THREE.MeshStandardMaterial = new THREE.MeshStandardMaterial({
-      color: 0xbdbdbd,
-      flatShading: true
+      color: 0xffffff,
+      flatShading: true,
+      vertexColors: true
     });
     const singleObject = new THREE.Mesh(singleGeo, material);
     normalizeObject(singleObject);
@@ -164,6 +217,22 @@ const Scene = ({
     clean(gltf);
     scene.add(singleObject);
     setGltf(singleObject);
+  }
+
+  const createColorAttributeFromGeo: Function = (geo: THREE.BufferGeometry, color: THREE.Color) => {
+    const colorsArray: Array<number> = [];
+    for (let i = 0; i < geo.attributes.position.array.length - 2; i+=3) {
+      colorsArray[i] = color.r;
+      colorsArray[i+1] = color.g;
+      colorsArray[i+2] = color.b;
+    }
+    const colorsTypedArray: Float32Array = new Float32Array(colorsArray);
+    const colorsToAttribute: THREE.BufferAttribute = new THREE.BufferAttribute(
+      colorsTypedArray,
+      3,
+      true
+    );
+    return colorsToAttribute;
   }
 
   const normalizeObject: Function = (object: THREE.Object3D) => {
@@ -182,33 +251,6 @@ const Scene = ({
       object.position.x += (object.position.x - center.x);
       object.position.y += (object.position.y - center.y);
       object.position.z += (object.position.z - center.z);
-  }
-
-  const flattenHierarchy: Function = (
-    object: THREE.Object3D,
-    parentMatrix: THREE.Matrix4
-  ) => {
-    const matrix: THREE.Matrix4 = new THREE.Matrix4().compose(
-      object.position.clone(),
-      object.quaternion.clone(),
-      object.scale.clone()
-    );
-    if (parentMatrix) {
-      matrix.multiplyMatrices(parentMatrix, matrix);
-    }
-
-    for (let child of object.children) {
-      flattenHierarchy(child, matrix);
-    }
-
-    if (object instanceof THREE.Mesh) {
-      // reapplique la nouvelle matrice sur l'objet
-      object.geometry.applyMatrix4(matrix);
-      object.position.set(0, 0, 0);
-      object.rotation.set(0, 0, 0);
-      object.scale.set(1, 1, 1);
-      object.updateMatrix();
-    }
   }
 
   const clean: Function = (object: THREE.Object3D) => {
@@ -237,7 +279,7 @@ const Scene = ({
   }
 
   useEffect(() => {
-    if (gltf && !isMergeObject) {
+    if (gltf) {
       handleRaycasterRender();
     } else if (idRaycasterRender) {
       cancelAnimationFrame(idRaycasterRender);

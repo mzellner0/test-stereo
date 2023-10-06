@@ -90,6 +90,7 @@ const SideBar = ({
         />
         {
           selectedMesh &&
+          !isMergeObject &&
           <div className='d-flex flex-row justify-content-between'>
             <p className="text-white me-2 w-75">
               Modifier la couleur de l'objet sélectionné :
